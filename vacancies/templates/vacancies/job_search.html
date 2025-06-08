@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Поиск вакансий</title>
+    {% load vacancy_filters %}
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -135,5 +136,124 @@
             <p class="no-results">Нет вакансий, соответствующих вашему запросу.</p>
         {% endif %}
     {% endif %}
+
+    <!-- Блок статистики и графиков -->
+    <div class="container mt-4">
+        <h2 class="text-center mb-4">Статистика вакансий</h2>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Количество вакансий</h5>
+                        <h2 class="text-center">{{ total_vacancies }}</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Диапазон зарплат</h5>
+                        <div class="text-center">
+                            <p>Медиана: {{ median_salary }} ₽</p>
+                            <p>Минимум: {{ min_salary }} ₽</p>
+                            <p>Максимум: {{ max_salary }} ₽</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Распределение зарплат</h5>
+                        <canvas id="salaryDistribution"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-4">
+                <!-- Удалён блок "Неденежные бенефиты" -->
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Сравнение с рыночной медианой</h5>
+                        <canvas id="salaryComparison"></canvas>
+                        {% if user_salary %}
+                            <div class="mt-3 text-center">
+                                {% if user_salary > median_salary %}
+                                    <p class="text-success">Ваша зарплата выше рыночной медианы на {{ user_salary|subtract:median_salary }} ₽</p>
+                                {% elif user_salary < median_salary %}
+                                    <p class="text-warning">Ваша зарплата ниже рыночной медианы на {{ median_salary|subtract:user_salary }} ₽</p>
+                                    <p class="text-info">Рекомендуется повысить зарплату до {{ median_salary }} ₽</p>
+                                {% else %}
+                                    <p class="text-info">Ваша зарплата соответствует рыночной медиане</p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Распределение зарплат
+        const salaryCtx = document.getElementById('salaryDistribution').getContext('2d');
+        new Chart(salaryCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ salary_ranges|safe }},
+                datasets: [{
+                    label: 'Количество вакансий',
+                    data: {{ salary_counts|safe }},
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+        // Сравнение зарплат
+        const comparisonCtx = document.getElementById('salaryComparison').getContext('2d');
+        new Chart(comparisonCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Рыночная медиана', 'Ваша зарплата'],
+                datasets: [{
+                    label: 'Зарплата (₽)',
+                    data: [{{ median_salary }}, {{ user_salary|default:0 }}],
+                    backgroundColor: [
+                        'rgba(54, 162, 235, 0.5)',
+                        'rgba(255, 206, 86, 0.5)'
+                    ],
+                    borderColor: [
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 206, 86, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    });
+    </script>
 </body>
 </html>

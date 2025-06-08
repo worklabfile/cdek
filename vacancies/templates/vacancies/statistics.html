@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="text-center mb-4">Статистика вакансий</h1>
+    
+    <!-- Общая статистика -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Количество вакансий</h5>
+                    <h2 class="text-center">{{ total_vacancies }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Диапазон зарплат</h5>
+                    <div class="text-center">
+                        <p>Медиана: {{ median_salary }} ₽</p>
+                        <p>Минимум: {{ min_salary }} ₽</p>
+                        <p>Максимум: {{ max_salary }} ₽</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Графики -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Распределение зарплат</h5>
+                    <canvas id="salaryDistribution"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Неденежные бенефиты</h5>
+                    <canvas id="benefitsChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Сравнение с внутренними зарплатами</h5>
+                    <canvas id="salaryComparison"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Распределение зарплат
+    const salaryCtx = document.getElementById('salaryDistribution').getContext('2d');
+    new Chart(salaryCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ salary_ranges|safe }},
+            datasets: [{
+                label: 'Количество вакансий',
+                data: {{ salary_counts|safe }},
+                backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Неденежные бенефиты
+    const benefitsCtx = document.getElementById('benefitsChart').getContext('2d');
+    new Chart(benefitsCtx, {
+        type: 'pie',
+        data: {
+            labels: {{ benefits_labels|safe }},
+            datasets: [{
+                data: {{ benefits_data|safe }},
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.5)',
+                    'rgba(54, 162, 235, 0.5)',
+                    'rgba(255, 206, 86, 0.5)',
+                    'rgba(75, 192, 192, 0.5)',
+                    'rgba(153, 102, 255, 0.5)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true
+        }
+    });
+
+    // Сравнение зарплат
+    const comparisonCtx = document.getElementById('salaryComparison').getContext('2d');
+    new Chart(comparisonCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Рыночная медиана', 'Внутренняя медиана'],
+            datasets: [{
+                label: 'Зарплата (₽)',
+                data: [{{ median_salary }}, {{ internal_median_salary }}],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.5)',
+                    'rgba(255, 99, 132, 0.5)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+});
+</script>
+{% endblock %} 

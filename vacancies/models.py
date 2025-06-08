@@ -9,6 +9,14 @@ class Vacancy(models.Model):
     employer = models.CharField(max_length=255, null=True, blank=True, verbose_name="Работодатель")
     url = models.URLField(verbose_name="Ссылка на вакансию")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
+    benefits = models.TextField(null=True, blank=True, verbose_name="Неденежные бенефиты")
+    is_internal = models.BooleanField(default=False, verbose_name="Внутренняя вакансия")
+    
+    @property
+    def salary(self):
+        if self.salary_from and self.salary_to:
+            return (self.salary_from + self.salary_to) // 2
+        return self.salary_from or self.salary_to or 0
 
     def __str__(self):
         return self.title
