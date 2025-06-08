@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load vacancy_filters %}
 
 {% block content %}
 <div class="container mt-4">
@@ -18,11 +19,10 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Диапазон зарплат</h5>
+                    <h5 class="card-title">Диапазон зарплат (в рублях)</h5>
                     <div class="text-center">
-                        <p>Медиана: {{ median_salary }} ₽</p>
-                        <p>Минимум: {{ min_salary }} ₽</p>
-                        <p>Максимум: {{ max_salary }} ₽</p>
+                        <p>Минимум: {{ min_salary|intcomma }} ₽</p>
+                        <p>Максимум: {{ max_salary|intcomma }} ₽</p>
                     </div>
                 </div>
             </div>
@@ -42,19 +42,21 @@
         <div class="col-md-6 mb-4">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Неденежные бенефиты</h5>
-                    <canvas id="benefitsChart"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-md-12 mb-4">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Сравнение с внутренними зарплатами</h5>
+                    <h5 class="card-title">Сравнение с вашей зарплатой</h5>
                     <canvas id="salaryComparison"></canvas>
+                    {% if user_salary %}
+                        <div class="mt-3 text-center">
+                            {% if user_salary > median_salary %}
+                                <p class="text-success">Ваша зарплата выше рыночной медианы на {{ user_salary|subtract:median_salary|intcomma }} ₽</p>
+                            {% elif user_salary < median_salary %}
+                                <p class="text-warning">Ваша зарплата ниже рыночной медианы на {{ median_salary|subtract:user_salary|intcomma }} ₽</p>
+                            {% else %}
+                                <p class="text-info">Ваша зарплата соответствует рыночной медиане</p>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center mt-3">Введите желаемую зарплату в форме поиска для сравнения</p>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -90,44 +92,22 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Неденежные бенефиты
-    const benefitsCtx = document.getElementById('benefitsChart').getContext('2d');
-    new Chart(benefitsCtx, {
-        type: 'pie',
-        data: {
-            labels: {{ benefits_labels|safe }},
-            datasets: [{
-                data: {{ benefits_data|safe }},
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.5)',
-                    'rgba(54, 162, 235, 0.5)',
-                    'rgba(255, 206, 86, 0.5)',
-                    'rgba(75, 192, 192, 0.5)',
-                    'rgba(153, 102, 255, 0.5)'
-                ]
-            }]
-        },
-        options: {
-            responsive: true
-        }
-    });
-
     // Сравнение зарплат
     const comparisonCtx = document.getElementById('salaryComparison').getContext('2d');
     new Chart(comparisonCtx, {
         type: 'bar',
         data: {
-            labels: ['Рыночная медиана', 'Внутренняя медиана'],
+            labels: ['Рыночная медиана', 'Ваша зарплата'],
             datasets: [{
                 label: 'Зарплата (₽)',
-                data: [{{ median_salary }}, {{ internal_median_salary }}],
+                data: [{{ median_salary }}, {{ user_salary|default:0 }}],
                 backgroundColor: [
                     'rgba(54, 162, 235, 0.5)',
-                    'rgba(255, 99, 132, 0.5)'
+                    'rgba(255, 206, 86, 0.5)'
                 ],
                 borderColor: [
                     'rgba(54, 162, 235, 1)',
-                    'rgba(255, 99, 132, 1)'
+                    'rgba(255, 206, 86, 1)'
                 ],
                 borderWidth: 1
             }]

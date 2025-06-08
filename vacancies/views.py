@@ -26,16 +26,38 @@ def format_salary(salary):
         return f"до {to_salary:,} {currency}"
     return "Не указана"
 
+def convert_to_rubles(salary, currency):
+    if not salary or not currency:
+        return None
+    
+    # Курсы валют (можно вынести в конфигурацию или получать через API)
+    exchange_rates = {
+        'RUR': 1,
+        'RUB': 1,
+        'USD': 90,  # Примерный курс
+        'EUR': 100,  # Примерный курс
+        'KZT': 0.2,  # Примерный курс
+        'BYR': 30,   # Примерный курс
+        'UAH': 2.5,  # Примерный курс
+        'UZS': 0.007 # Примерный курс
+    }
+    
+    rate = exchange_rates.get(currency.upper(), 1)
+    return int(salary * rate)
+
 def job_search_view(request):
     vacancies = []
     search_performed = False
     error = None
+    user_salary = None
+    
     if request.method == 'POST':
         form = JobSearchForm(request.POST)
         if form.is_valid():
             profession = form.cleaned_data['profession']
             salary = form.cleaned_data['salary']
             region = form.cleaned_data['region']
+            user_salary = salary if salary else None
             url = "https://api.hh.ru/vacancies" 
             params = {
                 'text': profession,
@@ -60,7 +82,8 @@ def job_search_view(request):
                             salary_to=vacancy.get('salary', {}).get('to'),
                             currency=vacancy.get('salary', {}).get('currency'),
                             employer=vacancy['employer']['name'],
-                            url=vacancy['alternate_url']
+                            url=vacancy['alternate_url'],
+                            user_salary=user_salary  # Сохраняем зарплату пользователя
                         )
                         saved_vacancies.append(saved_vacancy)
                     except Exception as e:
@@ -91,6 +114,7 @@ def job_search_view(request):
         'vacancies': vacancies,
         'search_performed': search_performed,
         'error': error,
+        'user_salary': user_salary,
     }
     return render(request, 'vacancies/job_search.html', context)
 
@@ -101,11 +125,18 @@ def statistics_view(request):
     # Общее количество вакансий
     total_vacancies = vacancies.count()
     
+    # Конвертируем все зарплаты в рубли
+    salaries_in_rubles = []
+    for vacancy in vacancies:
+        if vacancy.salary_from and vacancy.currency:
+            salary_in_rubles = convert_to_rubles(vacancy.salary_from, vacancy.currency)
+            if salary_in_rubles:
+                salaries_in_rubles.append(salary_in_rubles)
+    
     # Статистика по зарплатам
-    salaries = [v.salary for v in vacancies if v.salary]
-    median_salary = int(statistics.median(salaries)) if salaries else 0
-    min_salary = min(salaries) if salaries else 0
-    max_salary = max(salaries) if salaries else 0
+    median_salary = int(statistics.median(salaries_in_rubles)) if salaries_in_rubles else 0
+    min_salary = min(salaries_in_rubles) if salaries_in_rubles else 0
+    max_salary = max(salaries_in_rubles) if salaries_in_rubles else 0
     
     # Создаем диапазоны зарплат для гистограммы
     salary_ranges = [
@@ -115,7 +146,7 @@ def statistics_view(request):
     
     # Подсчитываем количество вакансий в каждом диапазоне
     salary_counts = [0] * len(salary_ranges)
-    for salary in salaries:
+    for salary in salaries_in_rubles:
         if salary <= 50000:
             salary_counts[0] += 1
         elif salary <= 100000:
@@ -135,19 +166,9 @@ def statistics_view(request):
         else:
             salary_counts[8] += 1
     
-    # Анализ неденежных бенефитов
-    benefits = []
-    for vacancy in vacancies:
-        if getattr(vacancy, 'benefits', None):
-            benefits.extend(vacancy.benefits.split(','))
-    
-    benefits_counter = Counter([b.strip() for b in benefits if b.strip()])
-    benefits_labels = list(benefits_counter.keys())
-    benefits_data = list(benefits_counter.values())
-    
-    # Внутренняя медиана
-    internal_salaries = [v.salary for v in vacancies if getattr(v, 'is_internal', False) and v.salary]
-    internal_median_salary = int(statistics.median(internal_salaries)) if internal_salaries else 0
+    # Получаем последнюю введенную зарплату
+    last_vacancy = Vacancy.objects.order_by('-id').first()
+    user_salary = last_vacancy.user_salary if last_vacancy else None
     
     context = {
         'total_vacancies': total_vacancies,
@@ -156,9 +177,7 @@ def statistics_view(request):
         'max_salary': max_salary,
         'salary_ranges': salary_ranges,
         'salary_counts': salary_counts,
-        'benefits_labels': benefits_labels,
-        'benefits_data': benefits_data,
-        'internal_median_salary': internal_median_salary,
+        'user_salary': user_salary,
     }
     
     return render(request, 'vacancies/statistics.html', context)

@@ -11,6 +11,7 @@ class Vacancy(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата создания")
     benefits = models.TextField(null=True, blank=True, verbose_name="Неденежные бенефиты")
     is_internal = models.BooleanField(default=False, verbose_name="Внутренняя вакансия")
+    user_salary = models.IntegerField(null=True, blank=True)
     
     @property
     def salary(self):
