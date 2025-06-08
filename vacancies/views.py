@@ -119,8 +119,15 @@ def job_search_view(request):
     return render(request, 'vacancies/job_search.html', context)
 
 def statistics_view(request):
-    # Получаем все вакансии
-    vacancies = Vacancy.objects.all()
+    # Получаем последнюю введенную вакансию для определения последнего запроса
+    last_vacancy = Vacancy.objects.order_by('-id').first()
+    last_query = last_vacancy.query if last_vacancy else None
+
+    # Если есть последний запрос, фильтруем вакансии по нему
+    if last_query:
+        vacancies = Vacancy.objects.filter(query=last_query)
+    else:
+        vacancies = Vacancy.objects.none() # Если запросов нет, то и вакансий нет
     
     # Общее количество вакансий
     total_vacancies = vacancies.count()
@@ -178,8 +185,7 @@ def statistics_view(request):
         else:
             salary_counts[8] += 1
     
-    # Получаем последнюю введенную зарплату
-    last_vacancy = Vacancy.objects.order_by('-id').first()
+    # Получаем последнюю введенную зарплату (уже из последней вакансии)
     user_salary = last_vacancy.user_salary if last_vacancy else None
     
     context = {
