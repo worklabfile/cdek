@@ -27,48 +27,6 @@ def format_salary(salary):
     return "Не указана"
 
 def job_search_view(request):
-    vacancies_qs = Vacancy.objects.filter(currency='RUR')
-    # --- Статистика ---
-    total_vacancies = vacancies_qs.count()
-    salaries = [v.salary for v in vacancies_qs if v.salary]
-    median_salary = int(statistics.median(salaries)) if salaries else 0
-    min_salary = min(salaries) if salaries else 0
-    max_salary = max(salaries) if salaries else 0
-    salary_ranges = [
-        '0-50k', '50k-100k', '100k-150k', '150k-200k',
-        '200k-250k', '250k-300k', '300k-350k', '350k-400k', '400k+'
-    ]
-    salary_counts = [0] * len(salary_ranges)
-    for salary in salaries:
-        if salary <= 50000:
-            salary_counts[0] += 1
-        elif salary <= 100000:
-            salary_counts[1] += 1
-        elif salary <= 150000:
-            salary_counts[2] += 1
-        elif salary <= 200000:
-            salary_counts[3] += 1
-        elif salary <= 250000:
-            salary_counts[4] += 1
-        elif salary <= 300000:
-            salary_counts[5] += 1
-        elif salary <= 350000:
-            salary_counts[6] += 1
-        elif salary <= 400000:
-            salary_counts[7] += 1
-        else:
-            salary_counts[8] += 1
-    benefits = []
-    for vacancy in vacancies_qs:
-        if getattr(vacancy, 'benefits', None):
-            benefits.extend(vacancy.benefits.split(','))
-    benefits_counter = Counter([b.strip() for b in benefits if b.strip()])
-    benefits_labels = list(benefits_counter.keys())
-    benefits_data = list(benefits_counter.values())
-    internal_salaries = [v.salary for v in vacancies_qs if getattr(v, 'is_internal', False) and v.salary]
-    internal_median_salary = int(statistics.median(internal_salaries)) if internal_salaries else 0
-    user_salary = None
-    # --- Поиск ---
     vacancies = []
     search_performed = False
     error = None
@@ -78,7 +36,6 @@ def job_search_view(request):
             profession = form.cleaned_data['profession']
             salary = form.cleaned_data['salary']
             region = form.cleaned_data['region']
-            user_salary = salary if salary else None
             url = "https://api.hh.ru/vacancies" 
             params = {
                 'text': profession,
@@ -134,16 +91,6 @@ def job_search_view(request):
         'vacancies': vacancies,
         'search_performed': search_performed,
         'error': error,
-        'total_vacancies': total_vacancies,
-        'median_salary': median_salary,
-        'min_salary': min_salary,
-        'max_salary': max_salary,
-        'salary_ranges': salary_ranges,
-        'salary_counts': salary_counts,
-        'benefits_labels': benefits_labels,
-        'benefits_data': benefits_data,
-        'internal_median_salary': internal_median_salary,
-        'user_salary': user_salary,
     }
     return render(request, 'vacancies/job_search.html', context)
 
@@ -155,7 +102,7 @@ def statistics_view(request):
     total_vacancies = vacancies.count()
     
     # Статистика по зарплатам
-    salaries = list(vacancies.values_list('salary', flat=True))
+    salaries = [v.salary for v in vacancies if v.salary]
     median_salary = int(statistics.median(salaries)) if salaries else 0
     min_salary = min(salaries) if salaries else 0
     max_salary = max(salaries) if salaries else 0
@@ -191,15 +138,15 @@ def statistics_view(request):
     # Анализ неденежных бенефитов
     benefits = []
     for vacancy in vacancies:
-        if vacancy.benefits:
+        if getattr(vacancy, 'benefits', None):
             benefits.extend(vacancy.benefits.split(','))
     
-    benefits_counter = Counter(benefits)
+    benefits_counter = Counter([b.strip() for b in benefits if b.strip()])
     benefits_labels = list(benefits_counter.keys())
     benefits_data = list(benefits_counter.values())
     
-    # Внутренняя медиана (предполагаем, что у нас есть поле is_internal)
-    internal_salaries = list(vacancies.filter(is_internal=True).values_list('salary', flat=True))
+    # Внутренняя медиана
+    internal_salaries = [v.salary for v in vacancies if getattr(v, 'is_internal', False) and v.salary]
     internal_median_salary = int(statistics.median(internal_salaries)) if internal_salaries else 0
     
     context = {
