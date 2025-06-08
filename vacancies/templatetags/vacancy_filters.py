@@ -1,7 +1,16 @@
 from django import template
-from django.template.defaultfilters import stringfilter
+from django.contrib.humanize.templatetags.humanize import intcomma
 
 register = template.Library()
+
+@register.filter
+def format_number(value):
+    if value is None:
+        return "Не указана"
+    try:
+        return intcomma(int(value))
+    except (ValueError, TypeError):
+        return value
 
 @register.filter
 def subtract(value, arg):

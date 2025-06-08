@@ -1,143 +1,124 @@
 {% extends 'base.html' %}
-{% load vacancy_filters %}
 
 {% block title %}Поиск вакансий{% endblock %}
 
-{% block extra_css %}
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        background-color: #f5f5f5;
-    }
-    .container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-    h1 {
-        color: #2c3e50;
-        text-align: center;
-        margin-bottom: 30px;
-    }
-    form {
-        background-color: white;
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        margin-bottom: 30px;
-    }
-    .form-group {
-        margin-bottom: 15px;
-    }
-    label {
-        display: block;
-        margin-bottom: 5px;
-        color: #34495e;
-    }
-    input[type="text"], input[type="number"] {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        box-sizing: border-box;
-    }
-    button {
-        background-color: #3498db;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        width: 100%;
-    }
-    button:hover {
-        background-color: #2980b9;
-    }
-    .vacancies-list {
-        list-style: none;
-        padding: 0;
-    }
-    .vacancy-item {
-        background-color: white;
-        padding: 15px;
-        margin-bottom: 15px;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    .vacancy-title {
-        color: #2c3e50;
-        font-size: 1.2em;
-        margin-bottom: 10px;
-        text-decoration: none;
-    }
-    .vacancy-title:hover {
-        color: #3498db;
-    }
-    .vacancy-salary {
-        color: #27ae60;
-        font-weight: bold;
-        margin-bottom: 5px;
-    }
-    .vacancy-employer {
-        color: #7f8c8d;
-    }
-    .error-message {
-        background-color: #e74c3c;
-        color: white;
-        padding: 10px;
-        border-radius: 4px;
-        margin-bottom: 20px;
-    }
-    .no-results {
-        text-align: center;
-        color: #7f8c8d;
-        font-style: italic;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container">
-    <h1>Поиск вакансий</h1>
-    
-    <form method="post">
-        {% csrf_token %}
-        <div class="form-group">
-            <label for="id_profession">Профессия:</label>
-            {{ form.profession }}
-        </div>
-        <div class="form-group">
-            <label for="id_salary">Желаемая зарплата:</label>
-            {{ form.salary }}
-        </div>
-        <div class="form-group">
-            <label for="id_region">Регион:</label>
-            {{ form.region }}
-        </div>
-        <button type="submit">Найти вакансии</button>
-    </form>
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <h2 class="card-title text-center mb-4">Поиск вакансий</h2>
+                    <form method="post" class="needs-validation" novalidate>
+                        {% csrf_token %}
+                        <div class="row mb-3">
+                            <label for="{{ form.profession.id_for_label }}" class="col-md-4 col-form-label">Профессия</label>
+                            <div class="col-md-8">
+                                {{ form.profession }}
+                                {% if form.profession.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.profession.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label for="{{ form.salary.id_for_label }}" class="col-md-4 col-form-label">Желаемая зарплата</label>
+                            <div class="col-md-8">
+                                {{ form.salary }}
+                                {% if form.salary.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.salary.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <label for="{{ form.region.id_for_label }}" class="col-md-4 col-form-label">Регион</label>
+                            <div class="col-md-8">
+                                {{ form.region }}
+                                {% if form.region.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.region.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Найти вакансии</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
-    {% if error %}
-        <div class="error-message">
-            {{ error }}
+            {% if search_performed %}
+                {% if error %}
+                    <div class="alert alert-danger mt-4" role="alert">
+                        {{ error }}
+                    </div>
+                {% elif vacancies %}
+                    <div class="mt-4">
+                        <h3 class="mb-4">Найденные вакансии</h3>
+                        <div class="row">
+                            {% for vacancy in vacancies %}
+                            <div class="col-12 mb-3">
+                                <div class="card h-100">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{{ vacancy.title }}</h5>
+                                        <p class="card-text">
+                                            <strong>Зарплата:</strong> {{ vacancy.salary }}<br>
+                                            <strong>Работодатель:</strong> {{ vacancy.employer }}
+                                        </p>
+                                        <a href="{{ vacancy.url }}" class="btn btn-outline-primary" target="_blank">Подробнее</a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info mt-4" role="alert">
+                        По вашему запросу ничего не найдено. Попробуйте изменить параметры поиска.
+                    </div>
+                {% endif %}
+            {% endif %}
         </div>
-    {% endif %}
-
-    {% if search_performed %}
-        {% if vacancies %}
-            <h2>Найденные вакансии:</h2>
-            <ul class="vacancies-list">
-                {% for vacancy in vacancies %}
-                    <li class="vacancy-item">
-                        <a href="{{ vacancy.url }}" target="_blank" class="vacancy-title">{{ vacancy.title }}</a>
-                        <div class="vacancy-salary">{{ vacancy.salary }}</div>
-                        <div class="vacancy-employer">{{ vacancy.employer }}</div>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="no-results">Нет вакансий, соответствующих вашему запросу.</p>
-        {% endif %}
-    {% endif %}
+    </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-control {
+        border-radius: 4px;
+        border: 1px solid #ced4da;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .form-control:focus {
+        border-color: var(--cdek-green);
+        box-shadow: 0 0 0 0.2rem rgba(0, 161, 156, 0.25);
+    }
+    
+    .btn-outline-primary {
+        color: var(--cdek-green);
+        border-color: var(--cdek-green);
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: var(--cdek-green);
+        border-color: var(--cdek-green);
+        color: white;
+    }
+    
+    .alert {
+        border-radius: 4px;
+        border: none;
+    }
+    
+    .alert-info {
+        background-color: var(--cdek-light-green);
+        color: var(--cdek-dark-green);
+    }
+</style>
 {% endblock %}

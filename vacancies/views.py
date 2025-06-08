@@ -127,11 +127,23 @@ def statistics_view(request):
     
     # Конвертируем все зарплаты в рубли
     salaries_in_rubles = []
+    formatted_vacancies = []
     for vacancy in vacancies:
         if vacancy.salary_from and vacancy.currency:
             salary_in_rubles = convert_to_rubles(vacancy.salary_from, vacancy.currency)
             if salary_in_rubles:
                 salaries_in_rubles.append(salary_in_rubles)
+
+        formatted_vacancies.append({
+            'title': vacancy.title,
+            'salary': format_salary({
+                'from': vacancy.salary_from,
+                'to': vacancy.salary_to,
+                'currency': vacancy.currency
+            }),
+            'employer': vacancy.employer,
+            'url': vacancy.url
+        })
     
     # Статистика по зарплатам
     median_salary = int(statistics.median(salaries_in_rubles)) if salaries_in_rubles else 0
@@ -178,6 +190,7 @@ def statistics_view(request):
         'salary_ranges': salary_ranges,
         'salary_counts': salary_counts,
         'user_salary': user_salary,
+        'vacancies': formatted_vacancies,
     }
     
     return render(request, 'vacancies/statistics.html', context)
